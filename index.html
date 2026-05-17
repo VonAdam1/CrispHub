@@ -643,15 +643,16 @@
 
             const bookGrid = document.getElementById('bookmarks-grid');
             
-            // Vi går tillbaka till div, det bevarar din glassmorphism-design exakt som den ska vara!
+            // Uppdaterat till <a> för att kringgå Vercels popup-blockerare, 
+            // men med styling som bevarar din snygga glassmorphism!
             bookGrid.innerHTML = BOOKMARKS.map(b => `
-                <div class="card bookmark-card" onclick="window.open('${b.url}', '_blank')">
+                <a href="${b.url}" target="_blank" class="card bookmark-card" style="text-decoration: none; color: inherit; outline: none; display: flex;">
                     <div class="card-header">
                         <i data-lucide="${b.icon || 'link'}"></i>
                         <h3>${b.name}</h3>
                     </div>
                     <p>Öppna länk</p>
-                </div>
+                </a>
             `).join('');
         }
 
@@ -662,8 +663,8 @@
 
             title.innerText = name.toUpperCase();
             
-            // Fixen för Vercel: APPS med stora bokstäver
-            iframe.src = `APPS/${folder}/index.html`; 
+            // Fixen för Vercel: Små bokstäver (apps) och inledande snedstreck (/)
+            iframe.src = `/apps/${folder}/index.html`; 
             viewer.style.display = 'flex';
             
             history.pushState({ app: folder }, name, `#${folder}`);
