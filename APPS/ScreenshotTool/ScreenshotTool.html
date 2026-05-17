@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Studio Pro</title>
+    
+    <!-- Externa bibliotek (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Ikoner -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar för "Pro" känsla */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+
+        /* Range Slider Styling (Tidslinje) */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #4b5563;
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Loader Animation */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Utility classes */
+        .active-file {
+            background-color: rgba(59, 130, 246, 0.15);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        /* Green light indicator for locked files */
+        .locked-file {
+            border-left: 3px solid #10b981; /* Green-500 */
+        }
+        .locked-indicator {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+        }
+    </style>
+</head>
+<body class="bg-neutral-900 text-gray-200 h-screen w-screen overflow-hidden flex flex-col font-sans select-none">
+
+    <!-- Header -->
+    <header class="h-12 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 shrink-0">
+        <div class="flex items-center gap-2">
+            <i data-lucide="aperture" class="text-blue-500 w-5 h-5"></i>
+            <h1 class="font-bold text-sm tracking-wide text-white uppercase">Screenshot Studio <span class="text-blue-500">Pro</span></h1>
+        </div>
+        <div class="text-xs text-gray-500">
+            v1.1.1 &bull; Local Processing
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Vänster: Videospelare -->
+        <section class="flex-1 flex flex-col bg-black relative group" id="video-container">
+            <!-- Dropzone Overlay -->
+            <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900 z-10">
+                <i data-lucide="film" class="w-16 h-16 text-neutral-700 mb-4"></i>
+                <p class="text-neutral-400 font-medium">Dra och släpp videofiler här</p>
+                <p class="text-neutral-600 text-sm mt-2">MP4, WEBM, MOV, MKV</p>
+                <button onclick="document.getElementById('file-input').click()" class="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium transition">
+                    Välj Filer
+                </button>
+            </div>
+
+            <!-- Video Element -->
+            <div class="flex-1 relative flex items-center justify-center overflow-hidden">
+                <video id="main-video" class="max-w-full max-h-full shadow-2xl outline-none" preload="metadata"></video>
+                
+                <!-- Feedback Overlay -->
+                <div id="toast" class="absolute top-4 bg-black/80 text-white px-4 py-2 rounded border border-white/10 opacity-0 transition-opacity pointer-events-none text-sm font-bold tracking-wider transform -translate-y-2 z-30">
+                    Action
+                </div>
+            </div>
+
+            <!-- Custom Controls -->
+            <div class="h-14 bg-neutral-900 border-t border-neutral-800 px-4 flex items-center gap-4 shrink-0 z-20">
+                <!-- Play/Pause -->
+                <button id="btn-play" class="text-gray-300 hover:text-white transition">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                </button>
+
+                <!-- Time Display -->
+                <div class="text-xs font-mono text-blue-400 w-24 text-center">
+                    <span id="time-current">00:00.00</span>
+                </div>
+
+                <!-- Timeline Scrubber -->
+                <input type="range" id="video-scrubber" min="0" value="0" step="0.01" class="flex-1 h-8">
+                
+                <!-- Time Total -->
+                <div class="text-xs font-mono text-gray-500 w-16 text-center">
+                    <span id="time-total">00:00</span>
+                </div>
+
+                <!-- Snap Button -->
+                <button id="btn-snap" class="flex items-center gap-1 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-xs text-blue-400 font-bold transition" title="Kortkommando: S">
+                    <i data-lucide="camera" class="w-3 h-3"></i>
+                    <span>SNAP</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Höger: Sidebar -->
+        <aside class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col shrink-0 z-30">
+            
+            <!-- Tab/Header Area -->
+            <div class="px-4 py-3 border-b border-neutral-800">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Batch Inställningar</h2>
+                
+                <!-- Settings Grid -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <!-- Resolution -->
+                    <div>
+                        <label class="block text-[10px] text-gray-500 mb-1">Upplösning</label>
+                        <div class="flex items-center bg-neutral-800 rounded px-2 py-1 border border-neutral-700">
+                            <input type="number" id="set-width" value="1920" class="bg-transparent w-full text-xs focus:outline-none text-right text-gray-200" placeholder="W">
+                            <span class="text-gray-500 mx-1">x</span>
+                            <input type="number" id="set-height" value="1080" class="bg-transparent w-full text-xs focus:outline-none text-gray-200" placeholder="H">
+                        </div>
+                    </div>
+                    
+                    <!-- Aspect Ratio Mode -->
+                    <div>
+                        <label class="block text-[10px] text-gray-500 mb-1">Bildförhållande</label>
+                        <select id="set-aspect" class="w-full bg-neutral-800 border border-neutral-700 text-xs rounded px-2 py-1.5 focus:outline-none text-gray-200">
+                            <option value="fit">Fit (Black Bars)</option>
+                            <option value="fill">Fill (Crop)</option>
+                            <option value="stretch">Stretch</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quality & Naming -->
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+                            <label>JPG Kvalitet & Storlek</label>
+                            <div class="flex items-center gap-2">
+                                <span id="est-size" class="text-blue-400 font-mono font-bold">~0 KB</span>
+                                <span id="quality-val" class="text-gray-400">90%</span>
+                            </div>
+                        </div>
+                        <input type="range" id="set-quality" min="10" max="100" value="90" class="w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-gray-500 mb-1">Filnamnsmönster</label>
+                        <input type="text" id="set-pattern" value="{original}_{time}_{width}p" class="w-full bg-neutral-800 border border-neutral-700 text-xs rounded px-2 py-1.5 focus:outline-none text-gray-300 placeholder-gray-600">
+                        <p class="text-[9px] text-gray-600 mt-1">Variabler: {original}, {time}, {width}, {height}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File List Header -->
+            <div class="px-4 py-2 bg-neutral-800/50 border-b border-neutral-800 flex justify-between items-center">
+                <span class="text-xs font-bold text-gray-400 uppercase">Källfiler</span>
+                <button onclick="document.getElementById('file-input').click()" class="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3 h-3"></i> Lägg till
+                </button>
+                <input type="file" id="file-input" multiple accept="video/*" class="hidden">
+            </div>
+
+            <!-- File List Container -->
+            <div id="file-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <!-- Filer renderas här av JS -->
+            </div>
+
+            <!-- Action Area -->
+            <div class="p-4 border-t border-neutral-800 bg-neutral-900 flex flex-col gap-2">
+                <button id="btn-process" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                    <span>Processera Bilder</span>
+                </button>
+                
+                <button id="btn-zip-all" class="hidden w-full py-2 bg-neutral-800 hover:bg-neutral-700 text-gray-300 font-medium rounded text-xs border border-neutral-700 transition flex items-center justify-center gap-2">
+                    <i data-lucide="archive" class="w-3 h-3"></i>
+                    <span>Ladda ner alla som ZIP</span>
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Hidden Canvas for Processing -->
+    <canvas id="proc-canvas" class="hidden"></canvas>
+
+    <!-- Progress Modal -->
+    <div id="progress-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center">
+        <div class="w-96 p-6 bg-neutral-800 border border-neutral-700 rounded-lg shadow-2xl">
+            <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                <div class="loader border-t-blue-500 w-4 h-4"></div>
+                Bearbetar...
+            </h3>
+            
+            <div class="w-full bg-neutral-900 h-2 rounded-full overflow-hidden mb-2">
+                <div id="progress-bar" class="bg-blue-500 h-full w-0 transition-all duration-300"></div>
+            </div>
+            
+            <div class="flex justify-between text-xs text-gray-400">
+                <span id="progress-text">Startar...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Ikoner ---
+        lucide.createIcons();
+
+        // --- State Management ---
+        const state = {
+            files: [], // { id, file, url, duration, selectedTime, thumbnail, isLocked, processedBlob, processedSize, originalName }
+            currentIndex: -1,
+            isPlaying: false,
+            settings: {
+                width: 1920,
+                height: 1080,
+                aspect: 'fit', // fit, fill, stretch
+                quality: 0.9,
+                pattern: '{original}_{time}_{width}p'
+            }
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            video: document.getElementById('main-video'),
+            scrubber: document.getElementById('video-scrubber'),
+            timeCurrent: document.getElementById('time-current'),
+            timeTotal: document.getElementById('time-total'),
+            fileList: document.getElementById('file-list'),
+            emptyState: document.getElementById('empty-state'),
+            fileInput: document.getElementById('file-input'),
+            btnPlay: document.getElementById('btn-play'),
+            btnSnap: document.getElementById('btn-snap'),
+            btnProcess: document.getElementById('btn-process'),
+            btnZipAll: document.getElementById('btn-zip-all'),
+            canvas: document.getElementById('proc-canvas'),
+            estSize: document.getElementById('est-size'),
+            progressModal: document.getElementById('progress-modal'),
+            progressBar: document.getElementById('progress-bar'),
+            progressText: document.getElementById('progress-text'),
+            progressPercent: document.getElementById('progress-percent'),
+            settings: {
+                width: document.getElementById('set-width'),
+                height: document.getElementById('set-height'),
+                aspect: document.getElementById('set-aspect'),
+                quality: document.getElementById('set-quality'),
+                pattern: document.getElementById('set-pattern'),
+                qualityVal: document.getElementById('quality-val')
+            },
+            toast: document.getElementById('toast')
+        };
+
+        // --- Initialization ---
+        function init() {
+            setupEventListeners();
+            updateUI();
+        }
+
+        // --- File Handling ---
+        function handleFiles(fileList) {
+            Array.from(fileList).forEach(file => {
+                if (!file.type.startsWith('video/')) return;
+
+                const fileObj = {
+                    id: crypto.randomUUID(),
+                    file: file,
+                    url: URL.createObjectURL(file),
+                    duration: 0,
+                    selectedTime: 0,
+                    thumbnail: null,
+                    isLocked: false,
+                    processedBlob: null,
+                    originalName: file.name.replace(/\.[^/.]+$/, "")
+                };
+                
+                state.files.push(fileObj);
+                preloadMetadata(fileObj);
+            });
+            
+            els.emptyState.classList.add('hidden');
+            if (state.currentIndex === -1 && state.files.length > 0) {
+                selectFile(0);
+            }
+            renderFileList();
+            els.btnZipAll.classList.add('hidden'); // Göm ZIP vid nya filer tills processad
+        }
+
+        function preloadMetadata(fileObj) {
+            const tempVideo = document.createElement('video');
+            tempVideo.preload = 'metadata';
+            tempVideo.src = fileObj.url;
+            tempVideo.muted = true;
+            
+            tempVideo.onloadedmetadata = () => {
+                fileObj.duration = tempVideo.duration;
+                fileObj.selectedTime = Math.min(tempVideo.duration * 0.1, 5); 
+                tempVideo.currentTime = fileObj.selectedTime;
+            };
+
+            tempVideo.onseeked = () => {
+                const thumbCanvas = document.createElement('canvas');
+                thumbCanvas.width = 160; 
+                thumbCanvas.height = 90;
+                const ctx = thumbCanvas.getContext('2d');
+                ctx.drawImage(tempVideo, 0, 0, thumbCanvas.width, thumbCanvas.height);
+                fileObj.thumbnail = thumbCanvas.toDataURL('image/jpeg', 0.5);
+                
+                renderFileList();
+                if(fileObj === state.files[state.currentIndex]) {
+                    calculateEstimatedSize();
+                }
+                tempVideo.src = "";
+                tempVideo.load();
+            };
+        }
+
+        function removeFile(id, e) {
+            e.stopPropagation();
+            const idx = state.files.findIndex(f => f.id === id);
+            if (idx > -1) {
+                URL.revokeObjectURL(state.files[idx].url);
+                state.files.splice(idx, 1);
+                
+                if (state.files.length === 0) {
+                    state.currentIndex = -1;
+                    els.video.src = '';
+                    els.emptyState.classList.remove('hidden');
+                } else if (idx === state.currentIndex) {
+                    selectFile(Math.max(0, idx - 1));
+                } else if (idx < state.currentIndex) {
+                    state.currentIndex--;
+                }
+                renderFileList();
+                // Hides zip button on list change for safety (forces re-process or re-check)
+                els.btnZipAll.classList.add('hidden');
+            }
+        }
+
+        function selectFile(index) {
+            if (index < 0 || index >= state.files.length) return;
+            
+            state.currentIndex = index;
+            const fileObj = state.files[index];
+            
+            const wasPlaying = !els.video.paused;
+            els.video.src = fileObj.url;
+            els.video.currentTime = fileObj.selectedTime;
+            
+            els.video.pause();
+            state.isPlaying = false;
+            updatePlayButton();
+
+            renderFileList();
+            updateUI();
+            
+            // Beräkna storlek när videon är redo
+            els.video.onseeked = () => calculateEstimatedSize();
+        }
+
+        // --- Render Logic ---
+        function renderFileList() {
+            els.fileList.innerHTML = '';
+            
+            state.files.forEach((file, idx) => {
+                const isActive = idx === state.currentIndex;
+                const div = document.createElement('div');
+                
+                // Styling based on state
+                let baseClasses = "group flex items-center gap-3 p-2 rounded cursor-pointer transition hover:bg-neutral-800 border-l-2";
+                if (isActive) {
+                    div.className = `${baseClasses} bg-blue-500/10 border-blue-500`;
+                } else if (file.isLocked) {
+                    div.className = `${baseClasses} border-green-500`;
+                } else {
+                    div.className = `${baseClasses} border-transparent`;
+                }
+                
+                div.onclick = () => selectFile(idx);
+
+                // Thumbnail & Locked Indicator
+                const thumbHtml = file.thumbnail 
+                    ? `<div class="relative">
+                        <img src="${file.thumbnail}" class="w-16 h-9 object-cover rounded bg-black">
+                         ${file.isLocked ? '<div class="absolute -top-1 -right-1 locked-indicator border border-neutral-900"></div>' : ''}
+                       </div>`
+                    : `<div class="w-16 h-9 bg-neutral-800 rounded animate-pulse"></div>`;
+
+                // Action Buttons Logic
+                let actionsHtml = '<div class="flex items-center gap-1">';
+                
+                // 1. Download Button (Only if processed)
+                if (file.processedBlob) {
+                    actionsHtml += `
+                        <button class="text-green-500 hover:text-green-400 p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-full transition shadow-sm" onclick="downloadSingle('${file.id}', event)" title="Ladda ner JPG">
+                            <i data-lucide="download" class="w-3 h-3"></i>
+                        </button>`;
+                }
+                
+                // 2. Delete Button (Always available, shows on hover)
+                actionsHtml += `
+                    <button class="text-gray-600 hover:text-red-500 p-1.5 rounded transition opacity-0 group-hover:opacity-100 focus:opacity-100" onclick="removeFile('${file.id}', event)" title="Ta bort fil">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                    </button>`;
+                
+                actionsHtml += '</div>';
+
+                // Meta
+                div.innerHTML = `
+                    ${thumbHtml}
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-medium text-gray-200 truncate" title="${file.originalName}">${file.originalName}</div>
+                        <div class="flex items-center justify-between mt-0.5">
+                            <div class="text-[10px] text-blue-400 font-mono">
+                                ${formatTime(file.selectedTime)}
+                            </div>
+                            ${file.processedBlob ? '<span class="text-[9px] text-green-500 font-bold px-1.5 py-0.5 bg-green-500/10 rounded">KLAR</span>' : ''}
+                        </div>
+                    </div>
+                    ${actionsHtml}
+                `;
+                els.fileList.appendChild(div);
+            });
+            lucide.createIcons();
+            
+            // Uppdatera process-knappen
+            els.btnProcess.disabled = state.files.length === 0;
+            els.btnProcess.innerHTML = state.files.length > 0 
+                ? `<i data-lucide="cpu" class="w-4 h-4"></i> <span>Processera ${state.files.length} filer</span>`
+                : `<i data-lucide="cpu" class="w-4 h-4"></i> <span>Processera Bilder</span>`;
+            lucide.createIcons();
+        }
+
+        // --- Player & Snap Logic ---
+        function togglePlay() {
+            if (els.video.paused) {
+                els.video.play();
+                state.isPlaying = true;
+            } else {
+                els.video.pause();
+                state.isPlaying = false;
+            }
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            const icon = state.isPlaying ? 'pause' : 'play';
+            els.btnPlay.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 fill-current"></i>`;
+            lucide.createIcons();
+        }
+
+        function snapCurrentFrame() {
+            if (state.currentIndex === -1) return;
+            
+            const file = state.files[state.currentIndex];
+            file.selectedTime = els.video.currentTime;
+            file.isLocked = true; // Mark as locked
+            file.processedBlob = null; // Reset processed state if we change the snap
+            
+            // Update UI Thumbnail
+            const canvas = document.createElement('canvas');
+            canvas.width = 160; canvas.height = 90;
+            canvas.getContext('2d').drawImage(els.video, 0, 0, 160, 90);
+            file.thumbnail = canvas.toDataURL('image/jpeg', 0.5);
+            
+            calculateEstimatedSize(); // Recalculate size
+            showToast("Frame Locked!");
+            renderFileList();
+            els.btnZipAll.classList.add('hidden'); // Hide zip since we modified a file
+        }
+
+        async function calculateEstimatedSize() {
+            if (state.files.length === 0 || !els.video.videoWidth) return;
+            
+            // Only update "Est. Size" for current video
+            const w = parseInt(state.settings.width);
+            const h = parseInt(state.settings.height);
+            
+            els.canvas.width = w;
+            els.canvas.height = h;
+            const ctx = els.canvas.getContext('2d');
+            
+            drawToCanvas(ctx, els.video, w, h, state.settings.aspect);
+            
+            els.canvas.toBlob((blob) => {
+                if(blob) {
+                    const sizeKB = blob.size / 1024;
+                    const sizeMB = sizeKB / 1024;
+                    const text = sizeMB >= 1 ? `${sizeMB.toFixed(2)} MB` : `${Math.round(sizeKB)} KB`;
+                    els.estSize.textContent = text;
+                    
+                    // Flash the size to indicate update
+                    els.estSize.classList.remove('text-blue-400');
+                    els.estSize.classList.add('text-white');
+                    setTimeout(() => {
+                        els.estSize.classList.remove('text-white');
+                        els.estSize.classList.add('text-blue-400');
+                    }, 200);
+                }
+            }, 'image/jpeg', state.settings.quality);
+        }
+
+        function showToast(msg) {
+            els.toast.textContent = msg;
+            els.toast.style.opacity = '1';
+            els.toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                els.toast.style.opacity = '0';
+                els.toast.style.transform = 'translateY(-8px)';
+            }, 1000);
+        }
+
+        // --- Processing Logic ---
+        async function processBatch() {
+            if (state.files.length === 0) return;
+
+            els.video.pause();
+            state.isPlaying = false;
+            
+            els.progressModal.classList.remove('hidden');
+            
+            const w = parseInt(state.settings.width);
+            const h = parseInt(state.settings.height);
+            els.canvas.width = w;
+            els.canvas.height = h;
+            const ctx = els.canvas.getContext('2d');
+
+            try {
+                for (let i = 0; i < state.files.length; i++) {
+                    const fileObj = state.files[i];
+                    
+                    updateProgress((i / state.files.length) * 100, `Genererar: ${fileObj.originalName}...`);
+
+                    els.video.src = fileObj.url;
+                    
+                    await new Promise(resolve => {
+                        els.video.onloadedmetadata = () => {
+                            els.video.currentTime = fileObj.selectedTime;
+                        };
+                        els.video.onseeked = () => resolve();
+                        if (els.video.readyState >= 1) els.video.currentTime = fileObj.selectedTime;
+                    });
+
+                    drawToCanvas(ctx, els.video, w, h, state.settings.aspect);
+
+                    const blob = await new Promise(resolve => els.canvas.toBlob(resolve, 'image/jpeg', state.settings.quality));
+                    fileObj.processedBlob = blob;
+                }
+
+                updateProgress(100, "Slutfört!");
+
+                setTimeout(() => {
+                    els.progressModal.classList.add('hidden');
+                    showToast("Bilder processade!");
+                    // Visa "Download All ZIP" knappen
+                    els.btnZipAll.classList.remove('hidden');
+                    // Återställ vy
+                    selectFile(state.currentIndex);
+                    renderFileList();
+                }, 500);
+
+            } catch (err) {
+                console.error(err);
+                alert("Fel: " + err.message);
+                els.progressModal.classList.add('hidden');
+            }
+        }
+
+        function downloadSingle(id, e) {
+            if(e) e.stopPropagation();
+            const file = state.files.find(f => f.id === id);
+            if(file && file.processedBlob) {
+                const w = parseInt(state.settings.width);
+                const h = parseInt(state.settings.height);
+                const filename = generateFilename(file, w, h);
+                saveAs(file.processedBlob, filename);
+            }
+        }
+
+        async function downloadZipAll() {
+             const zip = new JSZip();
+             const folder = zip.folder("screenshots");
+             
+             state.files.forEach(file => {
+                 if(file.processedBlob) {
+                     const w = parseInt(state.settings.width);
+                     const h = parseInt(state.settings.height);
+                     folder.file(generateFilename(file, w, h), file.processedBlob);
+                 }
+             });
+
+             const content = await zip.generateAsync({type:"blob"});
+             saveAs(content, "all_screenshots.zip");
+        }
+
+        // --- Helper Functions ---
+        function drawToCanvas(ctx, video, targetW, targetH, mode) {
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, targetW, targetH);
+            const sourceW = video.videoWidth;
+            const sourceH = video.videoHeight;
+            let drawW, drawH, offsetX, offsetY;
+
+            if (mode === 'stretch') {
+                drawW = targetW; drawH = targetH; offsetX = 0; offsetY = 0;
+            } else {
+                const sourceAspect = sourceW / sourceH;
+                const targetAspect = targetW / targetH;
+                let scale;
+                if (mode === 'fit') {
+                    scale = (sourceAspect > targetAspect) ? targetW / sourceW : targetH / sourceH;
+                } else {
+                    scale = (sourceAspect > targetAspect) ? targetH / sourceH : targetW / sourceW;
+                }
+                drawW = sourceW * scale;
+                drawH = sourceH * scale;
+                offsetX = (targetW - drawW) / 2;
+                offsetY = (targetH - drawH) / 2;
+            }
+            ctx.drawImage(video, offsetX, offsetY, drawW, drawH);
+        }
+
+        function generateFilename(fileObj, w, h) {
+            let name = state.settings.pattern;
+            const timeStr = fileObj.selectedTime.toFixed(2).replace('.', 's');
+            name = name.replace('{original}', fileObj.originalName)
+                       .replace('{time}', timeStr)
+                       .replace('{width}', w)
+                       .replace('{height}', h);
+            if (!name.toLowerCase().endsWith('.jpg')) name += '.jpg';
+            return name;
+        }
+
+        function updateProgress(percent, text) {
+            els.progressBar.style.width = `${percent}%`;
+            els.progressText.textContent = text;
+            els.progressPercent.textContent = `${Math.round(percent)}%`;
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 100);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+        }
+
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            const dz = document.body;
+            dz.addEventListener('dragover', e => { e.preventDefault(); });
+            dz.addEventListener('drop', e => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
+            els.fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+            els.video.addEventListener('timeupdate', () => {
+                els.scrubber.value = els.video.currentTime;
+                els.timeCurrent.textContent = formatTime(els.video.currentTime);
+            });
+            els.video.addEventListener('loadedmetadata', () => {
+                els.scrubber.max = els.video.duration;
+                els.timeTotal.textContent = formatTime(els.video.duration);
+            });
+            els.video.addEventListener('ended', () => { state.isPlaying = false; updatePlayButton(); });
+
+            els.scrubber.addEventListener('input', (e) => { els.video.currentTime = e.target.value; });
+            els.btnPlay.addEventListener('click', togglePlay);
+            els.btnSnap.addEventListener('click', snapCurrentFrame);
+            els.btnProcess.addEventListener('click', processBatch);
+            els.btnZipAll.addEventListener('click', downloadZipAll);
+            
+            // Settings Listeners
+            els.settings.quality.addEventListener('change', (e) => {
+                 state.settings.quality = e.target.value / 100;
+                 els.settings.qualityVal.textContent = e.target.value + '%';
+                 calculateEstimatedSize(); // Update size when quality changes
+            });
+            ['width', 'height', 'aspect', 'pattern'].forEach(key => {
+                els.settings[key].addEventListener('change', (e) => {
+                    state.settings[key] = e.target.value;
+                    calculateEstimatedSize(); // Update size when resolution changes
+                });
+            });
+
+            // Keyboard Shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                switch(e.code) {
+                    case 'Space': e.preventDefault(); togglePlay(); break;
+                    case 'KeyS': e.preventDefault(); snapCurrentFrame(); break;
+                    case 'ArrowLeft': e.preventDefault(); 
+                        els.video.currentTime += (e.shiftKey ? -1 : -0.04); break;
+                    case 'ArrowRight': e.preventDefault(); 
+                        els.video.currentTime += (e.shiftKey ? 1 : 0.04); break;
+                    case 'ArrowUp': e.preventDefault(); selectFile(state.currentIndex - 1); break;
+                    case 'ArrowDown': e.preventDefault(); selectFile(state.currentIndex + 1); break;
+                }
+            });
+        }
+
+        function updateUI() {}
+
+        init();
+    </script>
+</body>
+</html>
