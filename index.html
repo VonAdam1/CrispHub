@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crisp Film | Intranät</title>
+    <!-- Vi hämtar Lucide Icons för de snygga ikonerna -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* --- CSS DESIGN SYSTEM (PREMIUM GLASSMORPHISM) --- */
+        :root {
+            --bg-fallback: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=2000');
+            --glass-bg: rgba(15, 23, 42, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            
+            /* NEON FÄRGER */
+            --neon-yellow: #fbbf24;
+            --neon-blue: #00d2ff;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background: #020617;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('bg.jpg'), var(--bg-fallback);
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.35) saturate(1.2);
+            z-index: -1;
+            transform: scale(1.05);
+        }
+
+        #app-root {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 40px; 
+            overflow-y: auto;
+            position: relative;
+            scrollbar-width: none;
+        }
+
+        #app-root::-webkit-scrollbar { display: none; }
+
+        .dashboard-content {
+            max-width: 1400px; 
+            margin: 0 auto;
+            width: 100%;
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px; 
+        }
+
+        /* Logotyp-container */
+        .logo-container {
+            display: inline-block;
+            margin-bottom: 24px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .logo-container:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.4));
+        }
+
+        .logo-img {
+            max-height: 65px; 
+            width: auto;
+            display: block;
+        }
+
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #ffffff 0%, var(--neon-yellow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Sökknappen */
+        .search-trigger {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 14px 28px; 
+            border-radius: 16px;
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-muted);
+            font-size: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-trigger:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .shortcut-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            font-weight: 600;
+        }
+
+        /* --- INTRO SEKTION --- */
+        .company-intro {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px 32px; 
+            margin-bottom: 40px; 
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .intro-text-content {
+            font-size: 0.95rem;
+            line-height: 1.6em; /* Låst radhöjd */
+            max-height: 4.8em;  /* Höjden för exakt 3 rader */
+            overflow: hidden;
+            color: var(--text-muted);
+            transition: max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            
+            /* Tvingar texten till max 3 rader och lägger till "..." på slutet */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .company-intro.expanded .intro-text-content {
+            max-height: 1000px; 
+            -webkit-line-clamp: 999; /* Släpper spärren när man expanderar */
+        }
+
+        .intro-title {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* --- NY CSS: MAIL-LÄNKEN --- */
+        .mail-link {
+            color: var(--neon-blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .mail-link:hover {
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .read-more-btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 0;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .read-more-btn:hover {
+            color: var(--neon-yellow);
+        }
+
+        .read-more-btn i {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.4s ease;
+        }
+
+        .company-intro.expanded .read-more-btn i {
+            transform: rotate(180deg);
+        }
+
+        /* --- DASHBOARD LAYOUT (2 KOLUMNER) --- */
+        .dashboard-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 40px;
+            align-items: start; 
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        section { margin-bottom: 0; }
+
+        /* Neon-rubriker med utdragna laserlinjer */
+        section h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 24px;
+            font-weight: 700;
+            display: flex; 
+            align-items: center;
+            width: 100%; 
+        }
+
+        .apps-header h2 { 
+            color: var(--neon-blue); 
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.4); 
+        }
+        
+        .apps-header h2::after {
+            content: '';
+            flex-grow: 1; 
+            height: 1px;
+            margin-left: 16px; 
+            background: linear-gradient(90deg, var(--neon-blue), transparent); 
+            opacity: 0.5;
+            box-shadow: 0 0 8px var(--neon-blue);
+        }
+
+        .bookmarks-header h2 { 
+            color: var(--neon-yellow); 
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); 
+        }
+
+        .bookmarks-header h2::after {
+            content: '';
+            flex-grow: 1; 
+            height: 1px;
+            margin-left: 16px; 
+            background: linear-gradient(90deg, var(--neon-yellow), transparent); 
+            opacity: 0.5;
+            box-shadow: 0 0 8px var(--neon-yellow);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+            gap: 16px; 
+        }
+
+        /* --- KORT-DESIGN --- */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px; 
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-6px) scale(1.02);
+        }
+
+        /* Container för att placera ikon och text sida vid sida */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .card-header i {
+            flex-shrink: 0; 
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            transition: var(--transition);
+        }
+
+        .card-header h3 { 
+            font-size: 1.15rem; 
+            font-weight: 700; 
+            color: #fff; 
+            line-height: 1.3;
+            margin: 0;
+            flex-grow: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .card p { 
+            color: var(--text-muted); 
+            font-size: 0.85rem; 
+            line-height: 1.5; 
+            margin: 0;
+        }
+
+        /* --- NEON: APPAR (Konstant Ljusblå Glow) --- */
+        .app-card {
+            border-color: rgba(0, 210, 255, 0.3); 
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.05); 
+        }
+        
+        .app-card i {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--neon-blue);
+            box-shadow: inset 0 0 15px rgba(0, 210, 255, 0.1), 0 0 10px rgba(0, 210, 255, 0.2);
+        }
+        
+        .app-card:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.2), 0 0 20px rgba(0, 210, 255, 0.4);
+        }
+        
+        .app-card:hover i {
+            background: rgba(0, 210, 255, 0.2);
+            box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.3), 0 0 15px rgba(0, 210, 255, 0.6);
+            color: #fff;
+        }
+
+        /* --- NEON: BOKMÄRKEN (Konstant Guld/Gul Glow) --- */
+        .bookmark-card {
+            border-color: rgba(251, 191, 36, 0.3); 
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.05); 
+        }
+        
+        .bookmark-card i {
+            background: rgba(251, 191, 36, 0.1);
+            color: var(--neon-yellow);
+            box-shadow: inset 0 0 15px rgba(251, 191, 36, 0.1), 0 0 10px rgba(251, 191, 36, 0.2);
+        }
+        
+        .bookmark-card:hover {
+            border-color: var(--neon-yellow);
+            box-shadow: 0 10px 30px rgba(251, 191, 36, 0.15), 0 0 20px rgba(251, 191, 36, 0.4);
+        }
+
+        .bookmark-card:hover i {
+            background: rgba(251, 191, 36, 0.2);
+            box-shadow: inset 0 0 20px rgba(251, 191, 36, 0.3), 0 0 15px rgba(251, 191, 36, 0.6);
+            color: #fff;
+        }
+
+        /* --- IFRAME VIEWER --- */
+        #iframe-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #020617;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .iframe-top-bar {
+            height: 72px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+        }
+
+        .btn-back {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .btn-back:hover { background: rgba(255,255,255,0.15); }
+
+        iframe { flex-grow: 1; border: none; width: 100%; height: 100%; background: white; }
+
+        /* --- COMMAND PALETTE --- */
+        #command-palette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            padding-top: 15vh;
+        }
+
+        .palette-window {
+            background: #0f172a;
+            width: 100%;
+            max-width: 700px;
+            height: fit-content;
+            max-height: 60vh;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .palette-search-wrapper {
+            padding: 24px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .palette-search-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 1.3rem;
+            width: 100%;
+            font-weight: 300;
+        }
+
+        #palette-results { overflow-y: auto; padding: 12px; }
+
+        .result-item {
+            padding: 16px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: background 0.2s, border 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .result-item.selected {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .result-item i { width: 24px; height: 24px; }
+        
+        .result-item[data-type="app"] i { color: var(--neon-blue); }
+        .result-item[data-type="book"] i { color: var(--neon-yellow); }
+
+        .result-item .details span { display: block; font-size: 1.1rem; font-weight: 500; }
+        .result-item .details small { color: var(--text-muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <div class="background-overlay"></div>
+
+    <div id="app-root">
+        <div class="dashboard-content">
+            <header>
+                <a href="https://crispfilm.se" target="_blank" class="logo-container">
+                    <img src="logo.png" alt="Crisp Film" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="logo-text" style="display:none;">CRISP FILM</span>
+                </a>
+
+                <div class="search-trigger" onclick="openPalette()">
+                    <span>Vad letar du efter?</span>
+                    <span class="shortcut-badge">⌘ + K</span>
+                </div>
+            </header>
+
+            <div class="company-intro" id="intro-card">
+                <strong class="intro-title">Välkommen till Hubben</strong>
+                <div class="intro-text-content">
+                    Crisp Film är ett filmbolag med fokus på att skapa visuell magi. Vi tror på kraften i starka berättelser kombinerat med teknisk excellens.
+                    <br>Här på Crisp Hubben hittar du alla verktyg & bokmärken som krävs för att driva våra produktioner framåt. <br>Behöver du hjälp? Kontakta IT-supporten direkt via <a href="mailto:support@crispfilm.se" class="mail-link">support@crispfilm.se</a><br><br>
+                    Crisp Film är ett sammansvetsat gäng filmälskare på cirka 14 anställda. Vi arbetare efter modellen "V-formation" och vi ser alltid till att vara en hjälpsam och snäll kollega.<br>Du som anställd på Crisp förväntas bemöta dina kollegor & kunder med respekt & hänsyn.<br>
+                    <br><strong>Ledning:</strong> <br>
+                    • VD & Produktionschef: Thomas Aziz <br>
+                    • Head Of Post: Adam Sköld <br>
+                    • Creative Director: Gabriel Schock <br><br>
+                    Skyddsombud & Kontorsansvarig: Filippa Karlmann
+                </div>
+                <button class="read-more-btn" onclick="toggleIntro()">
+                    <span id="read-more-text">Läs mer om Crisp Film</span>
+                    <i data-lucide="chevron-down"></i>
+                </button>
+            </div>
+
+            <!-- DEN NYA TVÅ-KOLUMNS LAYOUTEN: APPAR VÄNSTER, BOKMÄRKEN HÖGER -->
+            <div class="dashboard-columns">
+                
+                <!-- KOLUMN 1 (VÄNSTER): Appar -->
+                <section class="apps-header">
+                    <h2>Lokala Applikationer</h2>
+                    <div class="grid" id="apps-grid"></div>
+                </section>
+
+                <!-- KOLUMN 2 (HÖGER): Bokmärken -->
+                <section class="bookmarks-header">
+                    <h2>Snabbåtkomst</h2>
+                    <div class="grid" id="bookmarks-grid"></div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="iframe-viewer">
+        <div class="iframe-top-bar">
+            <button class="btn-back" onclick="handleBackButton()">
+                <i data-lucide="chevron-left"></i>
+                Tillbaka till hubben
+            </button>
+            <h2 id="current-app-name" style="font-weight: 600; letter-spacing: 1px;">APP</h2>
+            <div style="width: 140px;"></div>
+        </div>
+        <iframe id="main-iframe" src=""></iframe>
+    </div>
+
+    <div id="command-palette" onclick="closePalette()">
+        <div class="palette-window" onclick="event.stopPropagation()">
+            <div class="palette-search-wrapper">
+                <i data-lucide="search" style="color: var(--text-muted)"></i>
+                <input type="text" id="palette-input" placeholder="Sök efter app eller länk..." autocomplete="off">
+            </div>
+            <div id="palette-results"></div>
+        </div>
+    </div>
+
+    <script>
+        const APP_REGISTRY = [
+            { id: 'time', folder: 'CrispIT', name: 'IT & Tjänster', icon: 'computer', desc: 'Hitta rätt tjänst & verktyg' },
+            { id: 'inv', folder: 'ScreenshotTool', name: 'Screenshot Tool', icon: 'video', desc: 'Screenshots on videos.' },
+            { id: 'post', folder: 'Crisp Dashboard', name: 'Crisp Dashboard', icon: 'monitor', desc: 'Crisp Films Dashboard.' },
+            { id: 'hr-sub', folder: 'Subtitles Formatter', name: 'Subtitles Formatter', icon: 'file-text', desc: 'Formattera undertexter snyggt.' },
+            { id: 'hr-kpi', folder: 'KPI - TimeTracking', name: 'KPI - Time Tracking', icon: 'clock', desc: 'Analysera tidsförbrukning.' }
+        ];
+
+        const BOOKMARKS = [
+            { name: 'Personalhandbok', url: 'https://docs.google.com/document/d/15pZBXm7sxhnj7sIY617M3KbyfohTuVQQFcMO_dCOSvE/edit?tab=t.0', icon: 'book' },
+            { name: 'Crisp Wiki', url: 'https://doc.clickup.com/90151264196/d/h/2kypy7y4-7515/43dfc35945f9e31', icon: 'book-open' },
+            { name: 'Mailmallar', url: 'https://docs.google.com/document/d/1ue1S0_fK4-6anYW9r9soiqQkNnj2AXIZLiQZlv7nqMc/edit?tab=t.0#heading=h.wuhpruckan2h', icon: 'mail' },
+            { name: 'Post Production Resources', url: 'https://app.milanote.com/1Um4xf1ouWk6e6?p=wEmGRCSi9Ad', icon: 'layers' },
+            { name: 'Frilansarkiv', url: 'https://docs.google.com/spreadsheets/d/1Q0pNbL2ftBzx2RtJfEuCqCrAE2FRXJ87wqxs6IhWK6g/edit?gid=996020971#gid=996020971', icon: 'archive' },
+            { name: 'ClickUp Onboarding', url: 'https://doc.clickup.com/90151264196/d/h/2kypy7y4-4375/d6871d7489a8eb9', icon: 'user-plus' },
+            { name: 'Crisp Gear', url: 'https://docs.google.com/spreadsheets/d/12PKxTSDlydH__pV1JYfJSFzzk0HhclOoVlQL1tOfGcQ/edit?usp=sharing', icon: 'camera' }
+        ];
+
+        let selectedIndex = 0;
+        let currentResults = [];
+
+        function init() {
+            renderUI();
+            setupEvents();
+            lucide.createIcons();
+            
+            window.addEventListener('popstate', (event) => {
+                closeIframe();
+            });
+        }
+
+        function toggleIntro() {
+            const card = document.getElementById('intro-card');
+            const btnText = document.getElementById('read-more-text');
+            const isExpanded = card.classList.toggle('expanded');
+            
+            btnText.innerText = isExpanded ? 'Visa mindre' : 'Läs mer om Crisp Film';
+        }
+
+        function renderUI() {
+            const appGrid = document.getElementById('apps-grid');
+            
+            appGrid.innerHTML = APP_REGISTRY.map(app => `
+                <div class="card app-card" onclick="launchApp('${app.folder}', '${app.name}')">
+                    <div class="card-header">
+                        <i data-lucide="${app.icon || 'box'}"></i>
+                        <h3>${app.name}</h3>
+                    </div>
+                    <p>${app.desc}</p>
+                </div>
+            `).join('');
+
+            const bookGrid = document.getElementById('bookmarks-grid');
+            
+            bookGrid.innerHTML = BOOKMARKS.map(b => `
+                <div class="card bookmark-card" onclick="window.open('${b.url}', '_blank')">
+                    <div class="card-header">
+                        <i data-lucide="${b.icon || 'link'}"></i>
+                        <h3>${b.name}</h3>
+                    </div>
+                    <p>Öppna länk</p>
+                </div>
+            `).join('');
+        }
+
+        function launchApp(folder, name) {
+            const viewer = document.getElementById('iframe-viewer');
+            const iframe = document.getElementById('main-iframe');
+            const title = document.getElementById('current-app-name');
+
+            title.innerText = name.toUpperCase();
+            iframe.src = `apps/${folder}/index.html`;
+            viewer.style.display = 'flex';
+            
+            history.pushState({ app: folder }, name, `#${folder}`);
+            closePalette();
+        }
+
+        function handleBackButton() {
+            history.back();
+        }
+
+        function closeIframe() {
+            const viewer = document.getElementById('iframe-viewer');
+            const iframe = document.getElementById('main-iframe');
+            viewer.style.display = 'none';
+            iframe.src = '';
+        }
+
+        function openPalette() {
+            const p = document.getElementById('command-palette');
+            p.style.display = 'flex';
+            const input = document.getElementById('palette-input');
+            input.value = "";
+            input.focus();
+            search(""); // Triggar rendering av alla alternativ direkt
+        }
+
+        function closePalette() {
+            document.getElementById('command-palette').style.display = 'none';
+        }
+
+        function search(query) {
+            const q = query.toLowerCase();
+            
+            const filteredApps = APP_REGISTRY.filter(a => a.name.toLowerCase().includes(q)).map(a => ({...a, type: 'app'}));
+            const filteredBooks = BOOKMARKS.filter(b => b.name.toLowerCase().includes(q)).map(b => ({...b, type: 'book'}));
+            
+            currentResults = [...filteredApps, ...filteredBooks];
+            selectedIndex = 0; 
+            
+            renderResults();
+        }
+
+        // Renderar DOM-noder för sökresultaten EN gång per sökning
+        function renderResults() {
+            const resultsDiv = document.getElementById('palette-results');
+            if (currentResults.length === 0) {
+                resultsDiv.innerHTML = '<div style="padding:20px; color:gray; text-align:center;">Inga träffar...</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = currentResults.map((item, index) => `
+                <div class="result-item ${index === selectedIndex ? 'selected' : ''}" 
+                     data-type="${item.type}"
+                     onclick="executeResult(${index})"
+                     onmouseenter="updateSelection(${index})">
+                    <i data-lucide="${item.icon || (item.type === 'app' ? 'box' : 'link')}"></i>
+                    <div class="details">
+                        <span>${item.name}</span>
+                        <small>${item.type === 'app' ? 'Lokal Applikation' : 'Extern Länk'}</small>
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+            scrollToSelection();
+        }
+
+        // Denna funktion löser buggen: Vi manipulerar endast CSS-klasser, vi raderar inte HTML:en
+        function updateSelection(index) {
+            selectedIndex = index;
+            const items = document.querySelectorAll('#palette-results .result-item');
+            items.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+
+        function scrollToSelection() {
+            const selectedElem = document.querySelector('#palette-results .selected');
+            if (selectedElem) selectedElem.scrollIntoView({ block: 'nearest' });
+        }
+
+        function executeResult(index) {
+            const item = currentResults[index];
+            if (!item) return;
+
+            if (item.type === 'app') {
+                launchApp(item.folder, item.name);
+            } else {
+                window.open(item.url, '_blank');
+                closePalette();
+            }
+        }
+
+        function setupEvents() {
+            window.addEventListener('keydown', e => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                    e.preventDefault();
+                    openPalette();
+                }
+                
+                if (e.key === 'Escape') {
+                    closePalette();
+                }
+
+                if (document.getElementById('command-palette').style.display === 'flex') {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const newIndex = (selectedIndex + 1) % currentResults.length;
+                        updateSelection(newIndex);
+                        scrollToSelection();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const newIndex = (selectedIndex - 1 + currentResults.length) % currentResults.length;
+                        updateSelection(newIndex);
+                        scrollToSelection();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        executeResult(selectedIndex);
+                    }
+                }
+            });
+
+            document.getElementById('palette-input').addEventListener('input', e => {
+                search(e.target.value);
+            });
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
