@@ -592,8 +592,8 @@
         const APP_REGISTRY = [
             { id: 'time', folder: 'CrispIT', name: 'IT & Tjänster', icon: 'computer', desc: 'Hitta rätt tjänst & verktyg' },
             { id: 'inv', folder: 'ScreenshotTool', name: 'Screenshot Tool', icon: 'video', desc: 'Screenshots on videos.' },
-            { id: 'post', folder: 'Crisp Dashboard', name: 'Crisp Dashboard', icon: 'monitor', desc: 'Crisp Films Dashboard.' },
-            { id: 'hr-sub', folder: 'Subtitles Formatter', name: 'Subtitles Formatter', icon: 'file-text', desc: 'Formattera undertexter snyggt.' },
+            { id: 'post', folder: 'CrispDashboard', name: 'Crisp Dashboard', icon: 'monitor', desc: 'Crisp Films Dashboard.' },
+            { id: 'hr-sub', folder: 'SubtitlesFormatter', name: 'Subtitles Formatter', icon: 'file-text', desc: 'Formattera undertexter snyggt.' },
             { id: 'hr-kpi', folder: 'KPI - TimeTracking', name: 'KPI - Time Tracking', icon: 'clock', desc: 'Analysera tidsförbrukning.' }
         ];
 
@@ -643,6 +643,7 @@
 
             const bookGrid = document.getElementById('bookmarks-grid');
             
+            // Vi går tillbaka till div, det bevarar din glassmorphism-design exakt som den ska vara!
             bookGrid.innerHTML = BOOKMARKS.map(b => `
                 <div class="card bookmark-card" onclick="window.open('${b.url}', '_blank')">
                     <div class="card-header">
@@ -660,7 +661,9 @@
             const title = document.getElementById('current-app-name');
 
             title.innerText = name.toUpperCase();
-			iframe.src = `/apps/${folder}/index.html`;
+            
+            // Fixen för Vercel: APPS med stora bokstäver
+            iframe.src = `APPS/${folder}/index.html`; 
             viewer.style.display = 'flex';
             
             history.pushState({ app: folder }, name, `#${folder}`);
