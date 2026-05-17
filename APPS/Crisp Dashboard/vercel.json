@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/clickup/:path*",
+      "destination": "https://api.clickup.com/api/v2/:path*"
+    },
+    {
+      "source": "/api/sheets/:path*",
+      "destination": "https://docs.google.com/:path*"
+    },
+    {
+      "source": "/api/calendar/:path*",
+      "destination": "https://calendar.google.com/:path*"
+    },
+    {
+      "source": "/api/holiday/:path*",
+      "destination": "https://sholiday.faboul.se/dagar/v2.1/:path*"
+    }
+  ]
+}
