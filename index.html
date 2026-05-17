@@ -660,7 +660,7 @@
             const title = document.getElementById('current-app-name');
 
             title.innerText = name.toUpperCase();
-            iframe.src = `apps/${folder}/index.html`;
+			iframe.src = `/apps/${folder}/index.html`;
             viewer.style.display = 'flex';
             
             history.pushState({ app: folder }, name, `#${folder}`);
