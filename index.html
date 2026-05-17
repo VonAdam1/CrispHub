@@ -565,7 +565,7 @@
             <h2 id="current-app-name" style="font-weight: 600; letter-spacing: 1px;">APP</h2>
             <div style="width: 140px;"></div>
         </div>
-        <iframe id="main-iframe" src=""></iframe>
+        <iframe id="main-iframe" src="" onload="syncIframeHistory()"></iframe>
     </div>
 
     <div id="command-palette" onclick="closePalette()">
@@ -605,8 +605,11 @@
             setupEvents();
             lucide.createIcons();
             
-            window.addEventListener('popstate', (event) => {
-                closeIframe();
+            // Lyssnar om man backar med Mouse 5 eller webbläsarknappen via URL-hashen
+            window.addEventListener('hashchange', () => {
+                if (!window.location.hash) {
+                    closeIframe();
+                }
             });
         }
 
@@ -648,20 +651,18 @@
 
             title.innerText = name.toUpperCase();
             
-            const targetSrc = `APPS/${folder}/index.html`;
-            iframe.src = targetSrc;
+            iframe.src = `APPS/${folder}/index.html`; 
             viewer.style.display = 'flex';
             
-            try {
-                history.pushState({ app: folder }, name, `#${folder}`);
-            } catch (error) {
-                console.log("Körs lokalt - hoppar över URL-ändring.");
-            }
+            // Sätter en hash i URL:en för säker historik (#CrispIT)
+            window.location.hash = folder;
             closePalette();
         }
 
         function handleBackButton() {
-            history.back();
+            closeIframe();
+            // Rensar bort hashen ur adressfältet snyggt utan att ladda om sidan
+            history.replaceState(null, null, ' ');
         }
 
         function closeIframe() {
@@ -669,10 +670,18 @@
             const iframe = document.getElementById('main-iframe');
             
             viewer.style.display = 'none';
-            
-            setTimeout(() => {
-                iframe.src = '';
-            }, 150);
+            iframe.src = ''; 
+        }
+
+        function syncIframeHistory() {
+            const iframe = document.getElementById('main-iframe');
+            try {
+                iframe.contentWindow.addEventListener('popstate', () => {
+                    handleBackButton();
+                });
+            } catch (e) {
+                // Ignorerar lokala file:// varningar
+            }
         }
 
         function openPalette() {
