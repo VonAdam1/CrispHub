@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIT Booking @ Crisp Film</title>
+  
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <style>
+    :root {
+      --bg-dark: #0f172a;      
+      --panel-bg: #1e293b;     
+      --border-col: #334155;   
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;       
+      --accent-hover: #2563eb;
+      --gold: #d4af37;         
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* INLOGGNINGSSKÄRM */
+    #login-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-col);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      max-width: 450px;
+      width: 100%;
+    }
+    .login-box h1 { margin-top: 0; font-size: 26px; }
+    .login-box p { color: var(--text-muted); margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
+    
+    .adblock-warning {
+      background-color: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--warning);
+      color: var(--warning);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 25px;
+      line-height: 1.4;
+    }
+
+    #google-button-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 40px;
+    }
+
+    /* HUVUDAPPEN */
+    #app-content { display: none; padding: 20px; }
+    .dashboard-container { max-width: 1300px; margin: 0 auto; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-col); }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-left img.logo { height: 40px; object-fit: contain; }
+    h1 { margin: 0; font-size: 24px; font-weight: 600; color: var(--text-main); letter-spacing: -0.5px; }
+    h1 span { color: var(--gold); }
+    .user-badge { font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px; margin-right: 15px; }
+
+    .panel { background-color: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 25px; }
+    .panel-title { font-size: 18px; color: var(--text-main); margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; }
+
+    #admin-panel { display: none; border: 1px solid var(--gold); }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+    .admin-table th, .admin-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-col); }
+    .admin-table th { color: var(--gold); font-weight: 600; text-transform: uppercase; font-size: 12px; }
+    .admin-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .status-aktiv { background-color: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .status-avbokad { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .btn-cancel { background-color: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+    .btn-cancel:hover { background-color: #dc2626; }
+    .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #calendar { height: 450px; }
+    .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border-col); }
+    .fc .fc-toolbar-title { font-size: 18px; color: var(--gold); }
+    .fc .fc-button-primary { background-color: var(--border-col); border-color: var(--border-col); text-transform: capitalize;}
+    .fc .fc-button-primary:hover { background-color: var(--accent); }
+    .fc .fc-daygrid-day-number { color: var(--text-muted); }
+    .fc .fc-event { background-color: var(--accent); border: none; padding: 2px; cursor: pointer; }
+
+    .split-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+    @media (min-width: 800px) { .split-grid { grid-template-columns: 350px 1fr; } }
+
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type="text"], input[type="email"], input[type="date"], input[type="number"], select { width: 100%; padding: 12px; background-color: var(--bg-dark); border: 1px solid var(--border-col); border-radius: 6px; color: var(--text-main); font-size: 15px; box-sizing: border-box; }
+    input:disabled, select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .switch-box { display: flex; align-items: center; gap: 10px; background: var(--bg-dark); padding: 12px; border: 1px solid var(--border-col); border-radius: 6px; margin-bottom: 15px; }
+    .switch-box label { margin: 0; color: var(--text-main); text-transform: none; font-size: 14px; cursor: pointer; }
+    .switch-box input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+
+    .inventory-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+    .inventory-card { background-color: var(--bg-dark); border: 1px solid var(--border-col); border-radius: 6px; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s; }
+    .inventory-card:hover { border-color: var(--accent); }
+    .inventory-info h4 { margin: 0 0 5px 0; font-size: 15px; color: var(--text-main); }
+    .inventory-info p { margin: 0; font-size: 12px; font-weight: bold; color: var(--gold); }
+    .inventory-info p.slut { color: var(--danger); }
+    
+    .counter-widget { display: flex; align-items: center; background: var(--panel-bg); border-radius: 4px; border: 1px solid var(--border-col); overflow: hidden; }
+    .counter-btn { background: transparent; border: none; color: var(--text-main); width: 35px; height: 35px; font-size: 18px; cursor: pointer; display: flex; justify-content: center; align-items: center;}
+    .counter-btn:hover { background: var(--border-col); }
+    .counter-btn:disabled { opacity: 0.3; cursor: not-allowed; hover: none; }
+    .counter-value { width: 40px; text-align: center; font-weight: bold; font-size: 16px; border-left: 1px solid var(--border-col); border-right: 1px solid var(--border-col); line-height: 35px; }
+
+    .btn { width: 100%; padding: 14px; background-color: var(--accent); color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background-color: var(--accent-hover); }
+    .btn:disabled { background-color: var(--border-col); color: var(--text-muted); cursor: not-allowed; }
+    .btn-admin { width: auto; background-color: var(--border-col); padding: 8px 16px; font-size: 13px; margin-left: 10px;}
+    .btn-admin:hover { background-color: #475569; }
+    
+    #status-msg { text-align: center; font-weight: bold; margin-top: 15px; color: var(--gold); display: none; }
+    .laddar-text { color: var(--accent); font-weight: bold; animation: blink 1.5s infinite; text-align: center;}
+    @keyframes blink { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--panel-bg); border: 1px solid var(--border-col); padding: 30px; border-radius: 8px; max-width: 400px; width: 100%; position: relative; }
+    .modal-close { position: absolute; top: 15px; right: 20px; cursor: pointer; font-size: 24px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div id="login-screen">
+    <div class="login-box">
+      <h1>DIT Booking <span>@ Crisp Film</span></h1>
+      <p>Detta är ett internt verktyg. Vänligen logga in med ditt Crisp Film-konto för att få tillgång till systemet.</p>
+      
+      <div class="adblock-warning">
+        <strong>Fungerar inte knappen?</strong><br>
+        Om du använder AdGuard, Safari eller Inkognitoläge kan inloggningen blockeras. Stäng av blockeraren för denna domän.
+      </div>
+      
+      <div id="google-button-container"></div>
+    </div>
+  </div>
+
+  <div id="app-content">
+    <div class="dashboard-container">
+      <header>
+        <div class="header-left">
+          <img src="logo.png" alt="Crisp Film Logo" class="logo" onerror="this.style.display='none'">
+          <h1>DIT Booking <span>@ Crisp Film</span></h1>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <span class="user-badge" id="display-user-email">Ej inloggad</span>
+          <button class="btn btn-admin" onclick="laskAdminPanel()">Admin Panel</button>
+        </div>
+      </header>
+      
+      <div class="panel" id="admin-panel">
+        <div class="panel-title">
+          <span>Hantera Bokningar (Endast Admin)</span>
+          <button class="btn-admin" onclick="laddarBokningar()">Uppdatera lista</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted);">Här listas alla bokningar. Klicka på 'Makulera' för att avboka och frigöra utrustningen.</p>
+        
+        <div id="admin-laddar" class="laddar-text" style="display:none; padding: 20px;">Hämtar databasen...</div>
+        
+        <div style="overflow-x: auto;">
+          <table class="admin-table" id="admin-table-body">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Projekt</th>
+                <th>Bokare</th>
+                <th>Datum</th>
+                <th>Utrustning</th>
+                <th>Status</th>
+                <th>Åtgärd</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Tidslinje & Bokningar</h2>
+        <div id="calendar"></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Skapa ny reservering</h2>
+        
+        <div class="split-grid">
+          <div>
+            <div class="form-group">
+              <label>Vem bokar?</label>
+              <div class="switch-box">
+                <input type="checkbox" id="check-extern" onchange="hanteraBokareTyp()">
+                <label for="check-extern">Jag är extern (Ej ClickUp)</label>
+              </div>
+              
+              <div id="box-intern">
+                <select id="clickup-anvandare" disabled>
+                  <option value="">Laddar användare...</option>
+                </select>
+              </div>
+              
+              <div id="box-extern" style="display:none;">
+                <input type="email" id="anvandar-epost" placeholder="Din e-postadress...">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Projekt</label>
+              <select id="clickup-projekt" disabled>
+                <option value="">Laddar projekt...</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+              <div class="form-group" style="flex:1;">
+                <label>Utlämning</label>
+                <input type="date" id="start-datum" onchange="kollaLagersaldo()">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Återlämning</label>
+                <input type="date" id="slut-datum" onchange="kollaLagersaldo()">
+              </div>
+            </div>
+            
+            <button class="btn" id="btn-submit" onclick="skickaBokning()" style="margin-top: 20px;">Slutför Bokning</button>
+            <div id="status-msg">Behandlar bokning...</div>
+          </div>
+
+          <div>
+            <label style="margin-bottom: 15px;">Välj utrustning & Hårddiskar (Lagersaldo beräknas på valda datum)</label>
+            <p id="inventory-help" style="font-size: 13px; color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">Välj start- och slutdatum till vänster för att låsa upp inventarielistan.</p>
+            <div class="inventory-list" id="inventory-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="event-modal">
+    <div class="modal-content">
+      <div class="modal-close" onclick="document.getElementById('event-modal').style.display='none'">&times;</div>
+      <h3 id="modal-title" style="margin-top:0; color:var(--gold);">Projektnamn</h3>
+      <p id="modal-desc" style="white-space: pre-wrap; font-size: 14px; line-height: 1.5; color: var(--text-main);"></p>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. GOOGLE INLOGGNINGSLOGIK
+    // ==========================================
+    
+    window.onload = function() {
+      if(typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+          client_id: "591680038387-vovc8rcgo1urfli5pfopdjetk5tnn7tr.apps.googleusercontent.com",
+          callback: hanteraGoogleInloggning
+        });
+        
+        google.accounts.id.renderButton(
+          document.getElementById("google-button-container"),
+          { theme: "outline", size: "large", type: "standard", text: "signin_with" }
+        );
+
+        // AKTIVERA ONE TAP (Lurar ofta AdGuard genom att inte kräva ett nytt fönster)
+        google.accounts.id.prompt(); 
+        
+      } else {
+        document.getElementById("google-button-container").innerHTML = "<p style='color:red'>Kunde inte ladda Google inloggning. Stäng av annonsblockerare.</p>";
+      }
+    };
+
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function hanteraGoogleInloggning(response) {
+      const payload = parseJwt(response.credential);
+      if (payload && payload.email) document.getElementById("display-user-email").innerText = "Inloggad som: " + payload.email;
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app-content").style.display = "block";
+      laddaSystemData();
+    }
+
+    // ==========================================
+    // 2. KÄRNLOGIK & API
+    // ==========================================
+
+    const API_URL = "https://script.google.com/macros/s/AKfycbwwbhKAq7vzB5hHjWOXZ3jpAO6YWYbJa-49RXK-2QUwj65CprehPR-pjYt4swpzu8eXhg/exec";
+    const ADMIN_PIN = "1234";
+
+    let systemData = null;
+    let varukorg = {}; 
+
+    function laddaSystemData() {
+      fetch(API_URL + "?action=getInitData")
+        .then(res => res.json())
+        .then(data => {
+          systemData = data;
+          byggDropdown(document.getElementById("clickup-projekt"), data.projekt, "-- Välj Projekt --");
+          const anvSelect = document.getElementById("clickup-anvandare");
+          anvSelect.innerHTML = '<option value="">-- Välj ditt namn --</option>';
+          data.anvandare.forEach(a => {
+            const opt = document.createElement("option");
+            opt.value = a.epost || "ingen@epost.se"; opt.innerText = a.namn;
+            anvSelect.appendChild(opt);
+          });
+          anvSelect.disabled = false;
+          initCalendar(data.events);
+          byggTommaKort(data.installningar.artiklar);
+        })
+        .catch(err => { alert("Nätverksfel vid hämtning av data."); console.error(err); });
+    }
+
+    function laskAdminPanel() {
+      const panel = document.getElementById("admin-panel");
+      if (panel.style.display === "block") { panel.style.display = "none"; return; }
+      const givenPin = prompt("Ange PIN-kod för att låsa upp Admin-panelen:");
+      if (givenPin === ADMIN_PIN) { panel.style.display = "block"; laddarBokningar(); } 
+      else if (givenPin !== null) alert("Felaktig PIN-kod. Åtkomst nekad.");
+    }
+
+    function laddarBokningar() {
+      const tableBody = document.querySelector("#admin-table-body tbody");
+      const laddarText = document.getElementById("admin-laddar");
+      tableBody.innerHTML = ""; laddarText.style.display = "block";
+      fetch(API_URL + "?action=getAllBookings")
+        .then(res => res.json())
+        .then(bokningar => {
+          laddarText.style.display = "none";
+          if (!bokningar || bokningar.length === 0) { tableBody.innerHTML = "<tr><td colspan='7'>Inga bokningar funna.</td></tr>"; return; }
+          bokningar.forEach(b => {
+            const tr = document.createElement("tr");
+            let statusHtml = b.status === "AKTIV" ? `<span class="status-badge status-aktiv">AKTIV</span>` : `<span class="status-badge status-avbokad">${b.status}</span>`;
+            let btnDisabled = b.status === "AKTIV" ? "" : "disabled"; 
+            const kortId = b.id.replace("BOK-", "#");
+            tr.innerHTML = `
+              <td style="font-family: monospace; color: var(--text-muted);">${kortId}</td>
+              <td style="font-weight: bold;">${b.projektnamn}</td><td>${b.epost}</td>
+              <td style="font-size: 12px;">${b.startdatum} <br>till<br> ${b.slutdatum}</td>
+              <td style="font-size: 12px; max-width: 250px;">${b.artiklar}</td><td>${statusHtml}</td>
+              <td><button class="btn-cancel" ${btnDisabled} id="btn-cancel-${b.id}" onclick="makuleraBokning('${b.id}')">Makulera</button></td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        })
+        .catch(err => { laddarText.innerText = "Kunde inte hämta bokningar (Nätverksfel)."; });
+    }
+
+    function makuleraBokning(bokningsId) {
+      if (!confirm("Är du säker på att du vill avboka denna order?")) return;
+      const btn = document.getElementById(`btn-cancel-${bokningsId}`);
+      btn.innerText = "Vänta..."; btn.disabled = true;
+      fetch(API_URL, { method: "POST", mode: "cors", body: JSON.stringify({ action: "updateBookingStatus", payload: { id: bokningsId, nyStatus: "AVBOKAD" } }) })
+      .then(res => res.json())
+      .then(res => {
+        if (res.framgang) { alert("Bokningen har makulerats."); laddarBokningar(); setTimeout(() => { window.location.reload(); }, 1500); } 
+        else { alert("Kunde inte makulera: " + res.meddelande); btn.innerText = "Makulera"; btn.disabled = false; }
+      }).catch(err => { alert("Nätverksfel. Försök igen."); btn.innerText = "Makulera"; btn.disabled = false; });
+    }
+
+    function byggDropdown(element, dataList, placeholder) {
+      element.innerHTML = `<option value="">${placeholder}</option>`;
+      dataList.forEach(item => { const opt = document.createElement("option"); opt.value = item.id; opt.innerText = item.namn; element.appendChild(opt); });
+      element.disabled = false;
+    }
+
+    function hanteraBokareTyp() {
+      const arExtern = document.getElementById("check-extern").checked;
+      document.getElementById("box-intern").style.display = arExtern ? "none" : "block";
+      document.getElementById("box-extern").style.display = arExtern ? "block" : "none";
+    }
+
+    function initCalendar(eventsData) {
+      const calendarEl = document.getElementById('calendar');
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth', themeSystem: 'standard', events: eventsData, firstDay: 1, 
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+        eventClick: function(info) {
+          document.getElementById("modal-title").innerText = info.event.title;
+          document.getElementById("modal-desc").innerText = info.event.extendedProps.description;
+          document.getElementById("event-modal").style.display = "flex";
+        }
+      });
+      calendar.render();
+    }
+
+    function byggTommaKort(artiklar) {
+      const container = document.getElementById("inventory-container"); container.innerHTML = "";
+      artiklar.forEach(art => {
+        if (!art.aktiv) return; varukorg[art.namn] = 0; 
+        container.innerHTML += `<div class="inventory-card" style="opacity: 0.5;"><div class="inventory-info"><h4>${art.namn}</h4><p>Välj datum först</p></div><div class="counter-widget"><button class="counter-btn" disabled>-</button><div class="counter-value">0</div><button class="counter-btn" disabled>+</button></div></div>`;
+      });
+    }
+
+    function kollaLagersaldo() {
+      const start = document.getElementById("start-datum").value; const slut = document.getElementById("slut-datum").value;
+      if (!start || !slut) return;
+      if (new Date(start) > new Date(slut)) return alert("Utlämning måste ske före återlämning!");
+      document.getElementById("inventory-help").innerText = "Hämtar tillgängliga lagersaldon från databasen..."; document.getElementById("inventory-container").style.opacity = "0.5";
+      for (let key in varukorg) { varukorg[key] = 0; }
+      fetch(API_URL + "?action=getAvailability&start=" + start + "&slut=" + slut)
+        .then(res => res.json())
+        .then(tillgangligtLager => { document.getElementById("inventory-help").innerText = `Visar lagersaldo för perioden ${start} till ${slut}.`; document.getElementById("inventory-container").style.opacity = "1"; ritaUppAktivaKort(tillgangligtLager); })
+        .catch(err => { alert("Kunde inte analysera kalenderkrockar."); });
+    }
+
+    function ritaUppAktivaKort(tillgangligtLager) {
+      const container = document.getElementById("inventory-container"); container.innerHTML = "";
+      systemData.installningar.artiklar.forEach(art => {
+        if (!art.aktiv) return;
+        const maxKvar = tillgangligtLager[art.namn] !== undefined ? tillgangligtLager[art.namn] : art.saldo;
+        const arSlut = maxKvar === 0; const safeId = art.namn.replace(/[^a-zA-Z0-9]/g, '');
+        container.innerHTML += `<div class="inventory-card" style="border-color: ${arSlut ? 'var(--danger)' : 'var(--border-col)'}"><div class="inventory-info"><h4>${art.namn}</h4><p class="${arSlut ? 'slut' : ''}">${arSlut ? 'Slut i lager' : 'I lager: ' + maxKvar + ' st'}</p></div><div class="counter-widget"><button class="counter-btn" id="btn-minus-${safeId}" onclick="andraAntal('${art.namn}', '${safeId}', -1, ${maxKvar})" ${arSlut ? 'disabled' : ''}>-</button><div class="counter-value" id="val-${safeId}">0</div><button class="counter-btn" id="btn-plus-${safeId}" onclick="andraAntal('${art.namn}', '${safeId}', 1, ${maxKvar})" ${arSlut ? 'disabled' : ''}>+</button></div></div>`;
+      });
+    }
+
+    function andraAntal(namn, safeId, forandring, maxKvar) {
+      let nyttAntal = (varukorg[namn] || 0) + forandring;
+      if (nyttAntal >= 0 && nyttAntal <= maxKvar) { varukorg[namn] = nyttAntal; document.getElementById(`val-${safeId}`).innerText = nyttAntal; }
+    }
+
+    function skickaBokning() {
+      const arExtern = document.getElementById("check-extern").checked;
+      let epost = arExtern ? document.getElementById("anvandar-epost").value.trim() : document.getElementById("clickup-anvandare").value;
+      if (!epost) return alert(arExtern ? "Ange en e-postadress." : "Välj ditt namn i listan.");
+      const projSelect = document.getElementById("clickup-projekt");
+      const projId = projSelect.value; const projNamn = projSelect.options[projSelect.selectedIndex]?.text;
+      const start = document.getElementById("start-datum").value; const slut = document.getElementById("slut-datum").value;
+      if (!projId || !start || !slut) return alert("Projekt och datum måste fyllas i.");
+      let valdaArray = []; for (let namn in varukorg) { if (varukorg[namn] > 0) valdaArray.push(varukorg[namn] + "x " + namn); }
+      if (valdaArray.length === 0) return alert("Du måste välja minst en utrustning från listan.");
+
+      document.getElementById("btn-submit").disabled = true; document.getElementById("status-msg").style.display = "block";
+      fetch(API_URL, { method: "POST", mode: "cors", body: JSON.stringify({ action: "boka", payload: { epost: epost, projektId: projId, projektnamn: projNamn, startdatum: start, slutdatum: slut, artiklarStrang: valdaArray.join(", ") } }) })
+      .then(res => res.json()).then(data => {
+        if (data.framgang) { alert("SUCCESS! Bokningen är registrerad och schemalagd i kalendern."); window.location.reload(); } 
+        else { alert("Fel: " + data.meddelande); document.getElementById("btn-submit").disabled = false; document.getElementById("status-msg").style.display = "none"; }
+      }).catch(err => { alert("Kritiskt nätverksfel."); document.getElementById("btn-submit").disabled = false; document.getElementById("status-msg").style.display = "none"; });
+    }
+  </script>
+</body>
+</html>
